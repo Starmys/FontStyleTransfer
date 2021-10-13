@@ -1,4 +1,5 @@
+# LaTeX Stuff
 *.pdf
-*.log
-*.gz
 *.aux
+*.gz
+*.log
