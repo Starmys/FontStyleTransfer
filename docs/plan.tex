@@ -9,14 +9,14 @@
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
 \pdfinfo{
-/Title (Insert Your Title Here)
-/Author (Put All Your Authors Here, Separated by Commas)}
+/Title (Handwritten Font Generator Based on Style-Mixing)
+/Author (Chengruidong Zhang, Haoran Xi)}
 \setcounter{secnumdepth}{0}  
  \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
-\title{Handwritten Font Generator \\ Based on StyleGAN}
+\title{Handwritten Font Generator \\ Based on Style-Mixing}
 \author{Chengruidong Zhang, Haoran Xi}
 \maketitle
 
@@ -34,16 +34,21 @@ A font consists of a set of character images sharing the same style. Because eac
 \section{Related Works}
 \subsection{Image Style Transfer Using CNN}
 It is an algorithm that can separate and recombine the image content and style of natural images. A Convolutional Neural Network is trained to extract high level image information and produce new images of high perceptual quality that combine the content of an arbitrary photograph with the appearance of specified artworks. This work proves the feasibility of using CNN for image style transfer.
+
 \subsection{StyleGAN}
 StyleGAN is a GAN architecture with a style-based generator that receives additional inputs to adjust the style. It leads to an automatically learned, unsupervised separation of high-level attributes and stochastic variation in the generated images, and it enables intuitive, scale-specific control of the synthesis.
+\\
+Unlike the traditional CNN decoder, StyleGAN adds an adaptive instance normalization (AdaIN) function to each convolution layer, where additional information is introduced to adjust the style.
+\\
+StyleGAN has an inspiring feature as known as Style Mixing, which allows the generator to mix the basic features (skeleton) of one image with the advanced features (style) of another image by applying their latent codes at different levels.
 
 \subsection{SKFont: skeleton-driven Korean font generator}
 With a limited sample of Korean characters, this research investigates the topic of font synthesis using an end-to-end conditional deep adversarial network. Only 114 samples are required for the SKFont model to generate the remaining characters in the same font style. This is accomplished in three steps.
 
 \begin{enumerate}
-\item generate complete target font characters by observing 114 target characters
-\item extract the structures of the synthesized characters obtained from the first step
-\item transfer the style of the target font onto these learned structures
+\item Generate complete target font characters by observing 114 target characters.
+\item Extract the structures of the synthesized characters obtained from the first step.
+\item Transfer the style of the target font onto these learned structures.
 \end{enumerate}
 This approach resolves flaws such as blurriness, breakage, and a lack of delicate shape and style delivery.
 
@@ -57,30 +62,31 @@ They propose a network that can convert any printed text image's font style from
 The dataset includes $32 \times 32$ images of common characters converted from different font files. System fonts such as Brush Script MT and Segoe Script can be used at the beginning. More handwritten fonts will be collected if necessary. We plan to start with English characters and numbers, and then introduce Chinese characters.
 
 \section{Model}
-We plan to build a Generative Adversarial Network, which consists of a 5-layer Style-based generator and a 3-layer conditional discriminator. The input and output are both $32 \times 32$ single-channel (black and white) images.
+We plan to build a Generative Adversarial Network, which consists of a Style-based generator with CNN encoder and a 5-layer conditional discriminator. The input and output are both $32 \times 32$ single-channel (black and white) images.
 \\
-On each training epoch, images of two different fonts are fed into the model, providing skeleton and style information, respectively.
+On each training epoch, two images of different fonts are fed into the model. The one providing the skeleton will be used for the lower part of the decoder, and the one providing the style will be used for the upper part.
 \begin{center}
-    \includegraphics[scale=0.7]{plan-fig-model.png}
+    \includegraphics[]{plan-fig-model.png}
 
-    Figure 2. General structure of\\our generator and discriminator. 
+    Figure 2. Rough structure of our generator\\and discriminator. The generator includes\\a 4-layer CNN encoder, a 4-layer Mapping\\Network and a 4-layer Synthesis Network\\(CNN decoder with AdaIN).
 \end{center}
-Denote an image of character $c$ and font $f$ by $I[c,f]$. For each time, the generator takes a pair of images $(I_1=I[c_i,f_0], I_2=I[c_j,f_k])$ and outputs an image $I_o$ with skeleton of $I_1$ and style of $I_2$. The discriminator differs the output from the groundtruth - image $I[c_i,f_k]$. Font $f_0$ should have clear skeletons, and can be the same whenever training or testing.
+Denote an image of character $i$ and font $F_k$ by $F_k[i]$. For each time, the generator takes a pair of images $(x_1=F_0[i], x_2=F_k[j])$ and outputs an image $\hat{y}$ with skeleton of $x_1$ and style of $x_2$. The discriminator differs the output from the groundtruth image $y=F_k[i]$. Font $F_0$ should have clear skeletons, and can be the same whenever training or testing.
 
 \section{Anticipated Outcomes}
-To be specific, the generator is expected to (1) separate the structure and style information of a image and (2) apply the style information to another image. The discriminator should be able to tell whether a pair of images describe the same character and belong to the same font.
+To be specific, the generator is expected to generate a new character image which mixes the structure of one input and the style of another. The discriminator should be able to tell whether a pair of images describe the same character and belong to the same font.
 \\
-Therefore, a well-trained generator can generate images of any character in the style of any input image $I_2$. If we input a handwritten character image repeatly with all common characters $I[c_i,f_0]$, we'll get a new handwritten font.
+Therefore, a well-trained generator can generate images of any character $i$ in the style of any font $F_k$. If we input a handwritten character image $x_2=F_{new}[j_0]$ repeatly with all common characters $x_1\in F_0$, we'll get a new handwritten font $F_{new}$.
 
 \section{Challanges and Concerns}
 \begin{itemize}
-    \item The typical StyleGAN extracts style information using fully-connected networks, which may not be able to seperate the style and skeleton of character images well. We may need a pre-trained skeleton extractor rather than roughly putting images into the generator.
-    \item The skeleton provider, $I[c_i,f_0]$, also plays the role of identifier. If our generator have the ability to remember the skeleton shape of all characters, we can replace the input $I_1$ of one-hot character codes.
+    \item The training process can be disoriented with two independent input variables. It might be better to start with an autoencoder.
+    \item The CNN encoder block is shared by two independent datapaths and provides relatively more static functions, which means it can be pre-trained rather than roughly training the whole generator together.
+    \item The skeleton provider, $F_0[i]$, also plays the role of identifier. If our generator have the ability to remember the skeleton of all characters, we can remove $x_1$ and input one-hot character codes into the decoder instead.
     \item Notice that fonts are stored in the form of vector graphs of quadratic Bezier curves. The final model should include a image trace module to output vector graphs.
 \end{itemize}
 
 \section{Reference}
-smallskip \noindent
+\smallskip \noindent
 Leon, A. G., Alexander, S. E., and Matthias, B. 2016. Image Style Transfer Using Convolutional Neural Networks. \textit{CVPR}, pp. 2414-2423.
 
 \smallskip \noindent
