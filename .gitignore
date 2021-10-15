@@ -1,5 +1,7 @@
 # LaTeX Stuff
 *.pdf
 *.aux
+*.fls
+*.fdb_latexmk
 *.gz
 *.log

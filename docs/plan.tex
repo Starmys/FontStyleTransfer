@@ -60,7 +60,11 @@ The dataset includes $32 \times 32$ images of common characters converted from d
 We plan to build a Generative Adversarial Network, which consists of a 5-layer Style-based generator and a 3-layer conditional discriminator. The input and output are both $32 \times 32$ single-channel (black and white) images.
 \\
 On each training epoch, images of two different fonts are fed into the model, providing skeleton and style information, respectively.
-\\
+\begin{center}
+    \includegraphics[scale=0.7]{plan-fig-model.png}
+
+    Figure 2. General structure of\\our generator and discriminator. 
+\end{center}
 Denote an image of character $c$ and font $f$ by $I[c,f]$. For each time, the generator takes a pair of images $(I_1=I[c_i,f_0], I_2=I[c_j,f_k])$ and outputs an image $I_o$ with skeleton of $I_1$ and style of $I_2$. The discriminator differs the output from the groundtruth - image $I[c_i,f_k]$. Font $f_0$ should have clear skeletons, and can be the same whenever training or testing.
 
 \section{Anticipated Outcomes}
@@ -83,10 +87,10 @@ Leon, A. G., Alexander, S. E., and Matthias, B. 2016. Image Style Transfer Using
 Tero, K., Samuli, L., and Timo, A. 2019. A Style-Based Generator Architecture for Generative Adversarial Networks. \textit{CVPR}, abs/1812.04948.
 
 \smallskip \noindent
-Ko, D. H., Hassan, A. U., Suk, J., & Choi, J. 2021. SKFont: skeleton-driven Korean font generator with conditional deep adversarial networks. \textit{International Journal on Document Analysis and Recognition (IJDAR)}, 1-13.
+Ko, D. H., Hassan, A. U., Suk, J., \& Choi, J. 2021. SKFont: skeleton-driven Korean font generator with conditional deep adversarial networks. \textit{International Journal on Document Analysis and Recognition (IJDAR)}, 1-13.
 
 \smallskip \noindent
-Bhunia, A. K., Bhunia, A. K., Banerjee, P., Konwer, A., Bhowmick, A., Roy, P. P., & Pal, U. 2018. Word level font-to-font image translation using convolutional recurrent generative adversarial networks. \textit{ICPR} (pp. 3645-3650).
+Bhunia, A. K., Bhunia, A. K., Banerjee, P., Konwer, A., Bhowmick, A., Roy, P. P., \& Pal, U. 2018. Word level font-to-font image translation using convolutional recurrent generative adversarial networks. \textit{ICPR} (pp. 3645-3650).
 
 
 
