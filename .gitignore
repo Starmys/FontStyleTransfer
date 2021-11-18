@@ -5,3 +5,15 @@
 *.fdb_latexmk
 *.gz
 *.log
+
+# Python Cache
+__pycache__
+
+# Config
+config.yaml
+
+# Processed Data
+data/img
+
+# Training Logs
+logs

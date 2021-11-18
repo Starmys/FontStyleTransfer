@@ -1,0 +1,17 @@
+general:
+  encoding: 'ASCII'
+  characters:
+    - from: 'a'
+      to: 'z'
+    - from: 'A'
+      to: 'Z'
+    - from: '0'
+      to: '9'
+render:
+  from: 'data/raw'
+  to: 'data/img'  # Don't change
+  fonts: ['*']
+train:
+  basefont: 'arial'
+generate:
+  basefont: 'arial'
