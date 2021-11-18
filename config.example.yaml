@@ -1,4 +1,5 @@
 general:
+  size: 32
   encoding: 'ASCII'
   characters:
     - from: 'a'

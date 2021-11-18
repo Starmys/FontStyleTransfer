@@ -5,6 +5,7 @@
 *.fdb_latexmk
 *.gz
 *.log
+*.psd
 
 # Python Cache
 __pycache__

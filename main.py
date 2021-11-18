@@ -3,18 +3,18 @@ import yaml
 import argparse
 
 from utils.characters import Characters
+from utils.renderer import Renderer
 
 
 if __name__ == '__main__':
 
     if not os.path.exists('config.yaml'):
         exit('Config file not found.')
-    
+
     with open('config.yaml') as f:
         config = yaml.safe_load(f)
-    
+
     chars = Characters(config['general'])
-    print(chars)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--render', '-r', help='Render character images', default=False, action='store_true')
@@ -23,4 +23,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.render:
-        exit()
+        Renderer(config['render'], chars).start()

@@ -2,6 +2,7 @@ class Characters(object):
 
     def __init__(self, config):
         try:
+            self.size = config['size']
             if config['encoding'].upper() != 'ASCII':
                 raise AssertionError(f'{config["encoding"]} encoding is not supported.')
             self.characters = []
