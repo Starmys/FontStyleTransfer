@@ -27,13 +27,13 @@ class Renderer(object):
             exit('Render config error.')
 
     def start(self):
-        size = self._chars.size
+        size = self._chars.get_size()
         for task in self._tasks:
             print(f'Rendering font: {task["from"]} => {os.path.join(task["to"], "*.jpg")}')
             if not os.path.exists(task['to']):
                 os.makedirs(task['to'])
             font = ImageFont.truetype(task['from'], int(size * 0.9))
-            for char in self._chars.characters:
+            for char in self._chars:
                 image = Image.fromarray(np.zeros((size, size, 3)).astype(np.uint8) - 1)
                 draw = ImageDraw.Draw(image)
                 w, h = font.getsize(char)
