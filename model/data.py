@@ -1,7 +1,8 @@
 import os
 
+import torch
 import numpy as np
-from matplotlib import image
+from PIL import Image
 
 
 class Data(object):
@@ -40,19 +41,24 @@ class Data(object):
 
         self._cache = {}
 
+    def _to_torch(self, x):
+        return torch.reshape(torch.from_numpy(x), (1, 1, x.shape[0], x.shape[1]))
+
     def _load_image(self, path):
         if path in self._cache:
             return self._cache[path]
         else:
-            img = image.imread(path)[:, :, 0]
-            img = 1 - img.astype(np.float32) / 255 * 2
-            self._cache[path] = img
-            return img
+            with Image.open(path) as img:
+                img_data = np.asarray(img)[:, :, 0]
+            img_data = 1 - img_data.astype(np.float32) / 255 * 2
+            img_data = self._to_torch(img_data)
+            self._cache[path] = img_data
+            return img_data
 
     def _wrap_data(self, mode, font, char_x, char_y):
         x1 = self._load_image(self._basefont[char_x])
-        x2 = self._load_image(self._paths[mode][font][char_x])
-        y = self._load_image(self._paths[mode][font][char_y])
+        x2 = self._load_image(self._paths[mode][font][char_y])
+        y = self._load_image(self._paths[mode][font][char_x])
         return f'{font}: {char_x} => {char_y}', x1, x2, y
 
     def iterator(self, mode):
@@ -71,3 +77,15 @@ class Data(object):
                     for char_y in chars:
                         if char_x != char_y:
                             yield self._wrap_data(mode, font, char_x, char_y)
+
+    def plot_results(self, name, tag, msg, y, y_hat):
+        font, chars = msg.split(': ')
+        char_1, char_2 = chars.split(' => ')
+        font_dir = os.path.join('logs', name, tag, font)
+        if not os.path.exists(font_dir):
+            os.makedirs(font_dir)
+        img_data = torch.cat((y, y_hat), -1)
+        img_data = img_data.detach().numpy().reshape(img_data.shape[-2:])
+        img_data = ((1 - img_data) / 2 * 255).astype(np.uint8)
+        img_data = np.repeat(img_data[:, :, np.newaxis], 3, axis=-1)
+        Image.fromarray(img_data).save(os.path.join(font_dir, f'{char_1}.{char_2}.jpg'))

@@ -13,22 +13,19 @@ render:
   to: 'data/img'
   fonts: ['*']
 train:
+  name: 'ex1'
   data:
     dir: 'data/img'  # Should be the same as config['render']['to']
     basefont: 'arial'
     train: 0.8
     dev: 0.1
     seed: 2021
-    batch_size: 128
-    epoch: 1
-  generator:
-    layer: 4
-  discriminator:
-    layer: 4
+  generator: 'u_net'
+  discriminator: 'classifier'
   training:
-    seed: 8000
+    seed: 2021
     lr: 0.01
-    epoch: 20
-    iteration: 500
+    epoch: 100
+    iteration: 2000
 generate:
   basefont: 'arial'
