@@ -19,6 +19,8 @@ train:
     train: 0.8
     dev: 0.1
     seed: 2021
+    batch_size: 128
+    epoch: 1
   generator:
     layer: 4
   discriminator:
