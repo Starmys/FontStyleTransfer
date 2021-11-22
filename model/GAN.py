@@ -101,7 +101,6 @@ class GAN(object):
         else:
             loss_G_GAN = 0
         loss_aux = F.l1_loss(y, y_hat) * self.l1_loss_weight + F.mse_loss(y, y_hat) * self.l2_loss_weight
-        # loss_aux = loss_aux * (1 - self.epoch / self.epoch_num) ** 2
         loss_G = loss_G_GAN + loss_aux
         loss_G = torch.mean(loss_G)
         loss_G.backward()
@@ -112,7 +111,7 @@ class GAN(object):
         self.D.apply(self.initialize_parameters)
         train_it = self.data.iterator('train')
         for epoch in range(self.epoch_num):
-            self.epoch = epoch
+            # self.epoch = epoch
             epoch_tag = str(epoch).zfill(len(str(self.epoch_num - 1)))
             print(f'========== Epoch {epoch_tag} ==========')
             self.train(train_it)
@@ -123,20 +122,19 @@ class GAN(object):
         print(f'Training...')
         for i in range(self.iteration_num):
             x, y = self._get_batch_data(iterator)
-            # x = y  # for auto-encoder
             x, y = self._to_device([x, y])
-            y_hat = self.G(x)                      # compute fake images: y_hat = G(x_1, x_2)
+            y_hat = self.G(x)                          # compute fake images: y_hat = G(x)
             # update D
             if i % self.g_d_rate == 0:
-                self.set_requires_grad(self.D, True)          # enable backprop for D
-                self.optimizer_D.zero_grad()                  # set D's gradients to zero
+                self.set_requires_grad(self.D, True)   # enable backprop for D
+                self.optimizer_D.zero_grad()           # set D's gradients to zero
                 loss_D = self.backward_D(x, y, y_hat)  # calculate gradients for D
-                self.optimizer_D.step()                       # update D's weights
+                self.optimizer_D.step()                # update D's weights
             # update G
-            self.set_requires_grad(self.D, False)         # D requires no gradients when optimizing G
-            self.optimizer_G.zero_grad()                  # set G's gradients to zero
-            loss_G = self.backward_G(x, y, y_hat)  # calculate gradients for G
-            self.optimizer_G.step()                       # udpate G's weights
+            self.set_requires_grad(self.D, False)      # D requires no gradients when optimizing G
+            self.optimizer_G.zero_grad()               # set G's gradients to zero
+            loss_G = self.backward_G(x, y, y_hat)      # calculate gradients for G
+            self.optimizer_G.step()                    # udpate G's weights
             # Log
             if i % 100 == 0:
                 print(f'Iteration {i}: Loss_D = {loss_D.item()}, Loss_G = {loss_G.item()}')
@@ -144,9 +142,8 @@ class GAN(object):
     def evaluate(self, iterator, tag):
         print(f'Evaluating...')
         for msg, x, y in iterator:
-            # x = y  # for auto-encoder
             x, y = self._to_device([x, y])
-            y_hat = self.G(x)          # compute fake images: y_hat = G(x_1, x_2)
+            y_hat = self.G(x)
             x, y, y_hat = self._cpu([x, y, y_hat])
             self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
         print(f'Log: logs/{self.name}/{tag}')
