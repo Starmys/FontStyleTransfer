@@ -40,6 +40,7 @@ class GAN(object):
         torch.manual_seed(config['seed'])
         self.epoch_num = config['epoch']
         self.iteration_num = config['iteration']
+        self.batch_size = config['batch_size']
         self.optimizer_G = torch.optim.Adam(self.G.parameters(), lr=config['lr'])
         self.optimizer_D = torch.optim.Adam(self.D.parameters(), lr=config['lr'])
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -48,6 +49,15 @@ class GAN(object):
         self.gan_loss = config['loss']['gan_loss']
         self.l1_loss_weight = config['loss']['l1_loss_weight']
         self.l2_loss_weight = config['loss']['l2_loss_weight']
+
+    def _get_batch_data(self, iterator):
+        x_1, x_2, y = [], [], []
+        for _ in range(self.batch_size):
+            msg, x_1_element, x_2_element, y_element = next(iterator)
+            x_1.append(x_1_element)
+            x_2.append(x_2_element)
+            y.append(y_element)
+        return torch.cat(x_1, 0), torch.cat(x_2, 0), torch.cat(y, 0)
 
     def initialize_parameters(self, m):
         if isinstance(m, nn.Conv2d):
@@ -77,6 +87,7 @@ class GAN(object):
             loss_D = (F.softplus(pred_fake) + F.softplus(-pred_real)) * 0.5
         else:
             loss_D = (pred_fake - pred_real) * 0.5
+        loss_D = torch.mean(loss_D)
         loss_D.backward()
         return loss_D
 
@@ -90,6 +101,7 @@ class GAN(object):
         else:
             loss_G_GAN = 0
         loss_G = loss_G_GAN + F.l1_loss(y, y_hat) * self.l1_loss_weight + F.mse_loss(y, y_hat) * self.l2_loss_weight
+        loss_G = torch.mean(loss_G)
         loss_G.backward()
         return loss_G
 
@@ -107,7 +119,7 @@ class GAN(object):
     def train(self, iterator):
         print(f'Training...')
         for i in range(self.iteration_num):
-            msg, x_1, x_2, y = next(iterator)
+            x_1, x_2, y = self._get_batch_data(iterator)
             # x_1, x_2 = y, y  # for auto-encoder
             x_1, x_2, y = self._to_device([x_1, x_2, y])
             y_hat = self.G(x_1, x_2)                      # compute fake images: y_hat = G(x_1, x_2)
