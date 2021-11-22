@@ -22,6 +22,6 @@ class Generator(nn.Module):
             torch.nn.Linear(128, 32 * 32)
         )
 
-    def forward(self, x_1, x_2):
-        latency = self.encoder(self.flatten(x_1))
+    def forward(self, x):
+        latency = self.encoder(self.flatten(x))
         return self.decoder(latency).view(1, 1, 32, 32)

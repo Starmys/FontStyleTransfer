@@ -56,10 +56,12 @@ class Data(object):
             return img_data
 
     def _wrap_data(self, mode, font, char_x, char_y):
-        x1 = self._load_image(self._basefont[char_x])
-        x2 = self._load_image(self._paths[mode][font][char_y])
+        x_0 = self._load_image(self._basefont[char_y])
+        x_1 = self._load_image(self._basefont[char_x])
+        x_2 = self._load_image(self._paths[mode][font][char_y])
+        x = torch.cat((x_0, x_1, x_2), 1)
         y = self._load_image(self._paths[mode][font][char_x])
-        return f'{font}: {char_x} => {char_y}', x1, x2, y
+        return f'{font}: {char_x} => {char_y}', x, y
 
     def iterator(self, mode):
         fonts = list(self._paths[mode].keys())
@@ -84,7 +86,7 @@ class Data(object):
         font_dir = os.path.join('logs', name, tag, font)
         if not os.path.exists(font_dir):
             os.makedirs(font_dir)
-        img_data = torch.cat((torch.cat((results[0], results[1]), -1), torch.cat((results[2], results[3]), -1)), -2)
+        img_data = torch.cat(results, -1)
         img_data = img_data.detach().numpy().reshape(img_data.shape[-2:])
         img_data = ((1 - img_data) / 2 * 255).astype(np.uint8)
         img_data = np.repeat(img_data[:, :, np.newaxis], 3, axis=-1)

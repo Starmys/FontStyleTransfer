@@ -52,13 +52,12 @@ class GAN(object):
         self.l2_loss_weight = config['loss']['l2_loss_weight']
 
     def _get_batch_data(self, iterator):
-        x_1, x_2, y = [], [], []
+        x, y = [], []
         for _ in range(self.batch_size):
-            msg, x_1_element, x_2_element, y_element = next(iterator)
-            x_1.append(x_1_element)
-            x_2.append(x_2_element)
+            msg, x_element, y_element = next(iterator)
+            x.append(x_element)
             y.append(y_element)
-        return torch.cat(x_1, 0), torch.cat(x_2, 0), torch.cat(y, 0)
+        return torch.cat(x, 0), torch.cat(y, 0)
 
     def initialize_parameters(self, m):
         if isinstance(m, nn.Conv2d):
@@ -76,12 +75,12 @@ class GAN(object):
                 for param in net.parameters():
                     param.requires_grad = requires_grad
 
-    def backward_D(self, x_1, x_2, y, y_hat):
+    def backward_D(self, x, y, y_hat):
         # Fake; stop backprop to the generator by detaching y_hat
-        fake_D_input = torch.cat((x_1, x_2, y_hat), 1)
+        fake_D_input = torch.cat((x, y_hat), 1)
         pred_fake = self.D(fake_D_input.detach())
         # Real
-        real_D_input = torch.cat((x_1, x_2, y), 1)
+        real_D_input = torch.cat((x, y), 1)
         pred_real = self.D(real_D_input)
         # combine loss and calculate gradients
         if self.gan_loss == 'lsgan':
@@ -92,8 +91,8 @@ class GAN(object):
         loss_D.backward()
         return loss_D
 
-    def backward_G(self, x_1, x_2, y, y_hat):
-        fake_D_input = torch.cat((x_1, x_2, y_hat), 1)
+    def backward_G(self, x, y, y_hat):
+        fake_D_input = torch.cat((x, y_hat), 1)
         pred_fake = self.D(fake_D_input)
         if self.gan_loss == 'lsgan':
             loss_G_GAN = F.softplus(-pred_fake)
@@ -102,7 +101,7 @@ class GAN(object):
         else:
             loss_G_GAN = 0
         loss_aux = F.l1_loss(y, y_hat) * self.l1_loss_weight + F.mse_loss(y, y_hat) * self.l2_loss_weight
-        loss_aux = loss_aux * (1 - self.epoch / self.epoch_num) ** 2
+        # loss_aux = loss_aux * (1 - self.epoch / self.epoch_num) ** 2
         loss_G = loss_G_GAN + loss_aux
         loss_G = torch.mean(loss_G)
         loss_G.backward()
@@ -123,20 +122,20 @@ class GAN(object):
     def train(self, iterator):
         print(f'Training...')
         for i in range(self.iteration_num):
-            x_1, x_2, y = self._get_batch_data(iterator)
-            # x_1, x_2 = y, y  # for auto-encoder
-            x_1, x_2, y = self._to_device([x_1, x_2, y])
-            y_hat = self.G(x_1, x_2)                      # compute fake images: y_hat = G(x_1, x_2)
+            x, y = self._get_batch_data(iterator)
+            # x = y  # for auto-encoder
+            x, y = self._to_device([x, y])
+            y_hat = self.G(x)                      # compute fake images: y_hat = G(x_1, x_2)
             # update D
             if i % self.g_d_rate == 0:
                 self.set_requires_grad(self.D, True)          # enable backprop for D
                 self.optimizer_D.zero_grad()                  # set D's gradients to zero
-                loss_D = self.backward_D(x_1, x_2, y, y_hat)  # calculate gradients for D
+                loss_D = self.backward_D(x, y, y_hat)  # calculate gradients for D
                 self.optimizer_D.step()                       # update D's weights
             # update G
             self.set_requires_grad(self.D, False)         # D requires no gradients when optimizing G
             self.optimizer_G.zero_grad()                  # set G's gradients to zero
-            loss_G = self.backward_G(x_1, x_2, y, y_hat)  # calculate gradients for G
+            loss_G = self.backward_G(x, y, y_hat)  # calculate gradients for G
             self.optimizer_G.step()                       # udpate G's weights
             # Log
             if i % 100 == 0:
@@ -144,10 +143,10 @@ class GAN(object):
 
     def evaluate(self, iterator, tag):
         print(f'Evaluating...')
-        for msg, x_1, x_2, y in iterator:
-            # x_1, x_2 = y, y  # for auto-encoder
-            x_1, x_2 = self._to_device([x_1, x_2])
-            y_hat = self.G(x_1, x_2)          # compute fake images: y_hat = G(x_1, x_2)
-            x_1, x_2, y, y_hat = self._cpu([x_1, x_2, y, y_hat])
-            self.data.plot_results(self.name, tag, msg, [x_1, x_2, y, y_hat])
+        for msg, x, y in iterator:
+            # x = y  # for auto-encoder
+            x, y = self._to_device([x, y])
+            y_hat = self.G(x)          # compute fake images: y_hat = G(x_1, x_2)
+            x, y, y_hat = self._cpu([x, y, y_hat])
+            self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
         print(f'Log: logs/{self.name}/{tag}')
