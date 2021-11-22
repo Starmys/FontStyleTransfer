@@ -43,7 +43,7 @@ class GAN(object):
         self.optimizer_G = torch.optim.Adam(self.G.parameters(), lr=config['lr'])
         self.optimizer_D = torch.optim.Adam(self.D.parameters(), lr=config['lr'])
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f'Running on {self.device.upper()}')
+        print(f'Running on {str(self.device).upper()}')
         self.G, self.D = self._to_device([self.G, self.D])
         self.gan_loss = config['loss']['gan_loss']
         self.l1_loss_weight = config['loss']['l1_loss_weight']
