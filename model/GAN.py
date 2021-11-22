@@ -30,15 +30,23 @@ class GAN(object):
                 for param in net.parameters():
                     param.requires_grad = requires_grad
 
+    def _to_device(self, arr):
+        return [tensor.to(self.device) for tensor in arr]
+
+    def _cpu(self, arr):
+        return [tensor.cpu() for tensor in arr]
+
     def _build_model(self, config):
         torch.manual_seed(config['seed'])
         self.epoch_num = config['epoch']
         self.iteration_num = config['iteration']
         self.optimizer_G = torch.optim.Adam(self.G.parameters(), lr=config['lr'])
         self.optimizer_D = torch.optim.Adam(self.D.parameters(), lr=config['lr'])
-        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.G = self.G.to(device)
-        # self.D = self.D.to(device)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.G, self.D = self._to_device([self.G, self.D])
+        self.gan_loss = config['loss']['gan_loss']
+        self.l1_loss_weight = config['loss']['l1_loss_weight']
+        self.l2_loss_weight = config['loss']['l2_loss_weight']
 
     def initialize_parameters(self, m):
         if isinstance(m, nn.Conv2d):
@@ -60,23 +68,27 @@ class GAN(object):
         # Fake; stop backprop to the generator by detaching y_hat
         fake_D_input = torch.cat((x_1, x_2, y_hat), 1)
         pred_fake = self.D(fake_D_input.detach())
-        loss_D_fake = F.softplus(pred_fake)  # LSGAN; WGAN: pred_fake
         # Real
         real_D_input = torch.cat((x_1, x_2, y), 1)
         pred_real = self.D(real_D_input)
-        loss_D_real = F.softplus(-pred_real)  # LSGAN; WGAN: -pred_real
         # combine loss and calculate gradients
-        loss_D = (loss_D_fake + loss_D_real) * 0.5
+        if self.gan_loss == 'lsgan':
+            loss_D = (F.softplus(pred_fake) + F.softplus(-pred_real)) * 0.5
+        else:
+            loss_D = (pred_fake - pred_real) * 0.5
         loss_D.backward()
         return loss_D
 
     def backward_G(self, x_1, x_2, y, y_hat):
         fake_D_input = torch.cat((x_1, x_2, y_hat), 1)
         pred_fake = self.D(fake_D_input)
-        loss_G_GAN = F.softplus(-pred_fake)  # LSGAN; WGAN: -pred_fake
-        loss_G_L1 = F.l1_loss(y, y_hat)
-        loss_G_L2 = F.mse_loss(y, y_hat)
-        loss_G = loss_G_GAN * 1 + loss_G_L1 * 100 + loss_G_L2 * 0
+        if self.gan_loss == 'lsgan':
+            loss_G_GAN = F.softplus(-pred_fake)
+        elif self.gan_loss == 'wgan':
+            loss_G_GAN = -pred_fake
+        else:
+            loss_G_GAN = 0
+        loss_G = loss_G_GAN + F.l1_loss(y, y_hat) * self.l1_loss_weight + F.mse_loss(y, y_hat) * self.l2_loss_weight
         loss_G.backward()
         return loss_G
 
@@ -96,6 +108,7 @@ class GAN(object):
         for i in range(self.iteration_num):
             msg, x_1, x_2, y = next(iterator)
             # x_1, x_2 = y, y  # for auto-encoder
+            x_1, x_2, y = self._to_device([x_1, x_2, y])
             y_hat = self.G(x_1, x_2)                      # compute fake images: y_hat = G(x_1, x_2)
             # update D
             self.set_requires_grad(self.D, True)          # enable backprop for D
@@ -115,6 +128,8 @@ class GAN(object):
         print(f'Evaluating...')
         for msg, x_1, x_2, y in iterator:
             # x_1, x_2 = y, y  # for auto-encoder
+            x_1, x_2 = self._to_device([x_1, x_2])
             y_hat = self.G(x_1, x_2)          # compute fake images: y_hat = G(x_1, x_2)
-            self.data.plot_results(self.name, tag, msg, y, y_hat)
+            x_1, x_2, y, y_hat = self._cpu([x_1, x_2, y, y_hat])
+            self.data.plot_results(self.name, tag, msg, [x_1, x_2, y, y_hat])
         print(f'Log: logs/{self.name}/{tag}')

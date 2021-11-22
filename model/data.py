@@ -78,13 +78,13 @@ class Data(object):
                         if char_x != char_y:
                             yield self._wrap_data(mode, font, char_x, char_y)
 
-    def plot_results(self, name, tag, msg, y, y_hat):
+    def plot_results(self, name, tag, msg, results):
         font, chars = msg.split(': ')
         char_1, char_2 = chars.split(' => ')
         font_dir = os.path.join('logs', name, tag, font)
         if not os.path.exists(font_dir):
             os.makedirs(font_dir)
-        img_data = torch.cat((y, y_hat), -1)
+        img_data = torch.cat((torch.cat((results[0], results[1]), -1), torch.cat((results[2], results[3]), -1)), -2)
         img_data = img_data.detach().numpy().reshape(img_data.shape[-2:])
         img_data = ((1 - img_data) / 2 * 255).astype(np.uint8)
         img_data = np.repeat(img_data[:, :, np.newaxis], 3, axis=-1)
