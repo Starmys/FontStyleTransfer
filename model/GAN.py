@@ -41,6 +41,7 @@ class GAN(object):
         self.epoch_num = config['epoch']
         self.iteration_num = config['iteration']
         self.batch_size = config['batch_size']
+        self.g_d_rate = config['g_d_rate']
         self.optimizer_G = torch.optim.Adam(self.G.parameters(), lr=config['lr'])
         self.optimizer_D = torch.optim.Adam(self.D.parameters(), lr=config['lr'])
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -100,7 +101,9 @@ class GAN(object):
             loss_G_GAN = -pred_fake
         else:
             loss_G_GAN = 0
-        loss_G = loss_G_GAN + F.l1_loss(y, y_hat) * self.l1_loss_weight + F.mse_loss(y, y_hat) * self.l2_loss_weight
+        loss_aux = F.l1_loss(y, y_hat) * self.l1_loss_weight + F.mse_loss(y, y_hat) * self.l2_loss_weight
+        loss_aux = loss_aux * (1 - self.epoch / self.epoch_num) ** 2
+        loss_G = loss_G_GAN + loss_aux
         loss_G = torch.mean(loss_G)
         loss_G.backward()
         return loss_G
@@ -110,6 +113,7 @@ class GAN(object):
         self.D.apply(self.initialize_parameters)
         train_it = self.data.iterator('train')
         for epoch in range(self.epoch_num):
+            self.epoch = epoch
             epoch_tag = str(epoch).zfill(len(str(self.epoch_num - 1)))
             print(f'========== Epoch {epoch_tag} ==========')
             self.train(train_it)
@@ -124,10 +128,11 @@ class GAN(object):
             x_1, x_2, y = self._to_device([x_1, x_2, y])
             y_hat = self.G(x_1, x_2)                      # compute fake images: y_hat = G(x_1, x_2)
             # update D
-            self.set_requires_grad(self.D, True)          # enable backprop for D
-            self.optimizer_D.zero_grad()                  # set D's gradients to zero
-            loss_D = self.backward_D(x_1, x_2, y, y_hat)  # calculate gradients for D
-            self.optimizer_D.step()                       # update D's weights
+            if i % self.g_d_rate == 0:
+                self.set_requires_grad(self.D, True)          # enable backprop for D
+                self.optimizer_D.zero_grad()                  # set D's gradients to zero
+                loss_D = self.backward_D(x_1, x_2, y, y_hat)  # calculate gradients for D
+                self.optimizer_D.step()                       # update D's weights
             # update G
             self.set_requires_grad(self.D, False)         # D requires no gradients when optimizing G
             self.optimizer_G.zero_grad()                  # set G's gradients to zero

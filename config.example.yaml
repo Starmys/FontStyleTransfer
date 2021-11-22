@@ -28,6 +28,7 @@ train:
     epoch: 100
     iteration: 2000
     batch_size: 8
+    g_d_rate: 10
     loss:
       gan_loss: 'lsgan'
       l1_loss_weight: 100
