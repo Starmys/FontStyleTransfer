@@ -40,35 +40,16 @@ class Generator(nn.Module):
 
         self.blocks.append(nn.Tanh())
 
-        self.mapping_network = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=3, padding=1),
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(16, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Flatten(),
-            nn.Linear(512, self.latent_dim),
-            nn.LeakyReLU(0.2, inplace=True)
-        )
+        self.mapping_network = MappingNetwork(self.latent_dim)
 
     def forward(self, x):
 
         batch_size = x.shape[0]
         image_size = x.shape[-1]
 
-        noise = torch.FloatTensor(batch_size, image_size, image_size, 1).uniform_(0., 1.)
-        noise = noise.to(self.device)
+        # noise = torch.FloatTensor(batch_size, image_size, image_size, 1).uniform_(0., 1.)
+        # noise = noise.to(self.device)
+        noise = None
 
         x_1 = x[:, 1:2, :, :]
         style_1 = self.mapping_network(x_1)[:, None, :]
@@ -97,11 +78,11 @@ class GeneratorBlock(nn.Module):
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False) if upsample else None
 
         self.to_style1 = nn.Linear(latent_dim, input_channels)
-        self.to_noise1 = nn.Linear(1, filters)
+        # self.to_noise1 = nn.Linear(1, filters)
         self.conv1 = Conv2DMod(input_channels, filters, 3)
         
         self.to_style2 = nn.Linear(latent_dim, filters)
-        self.to_noise2 = nn.Linear(1, filters)
+        # self.to_noise2 = nn.Linear(1, filters)
         self.conv2 = Conv2DMod(filters, filters, 3)
 
         self.activation = nn.LeakyReLU(0.2, inplace=True)
@@ -110,17 +91,19 @@ class GeneratorBlock(nn.Module):
         if self.upsample is not None:
             x = self.upsample(x)
 
-        inoise = inoise[:, :x.shape[2], :x.shape[3], :]
-        noise1 = self.to_noise1(inoise).permute((0, 3, 2, 1))
-        noise2 = self.to_noise2(inoise).permute((0, 3, 2, 1))
+        # inoise = inoise[:, :x.shape[2], :x.shape[3], :]
+        # noise1 = self.to_noise1(inoise).permute((0, 3, 2, 1))
+        # noise2 = self.to_noise2(inoise).permute((0, 3, 2, 1))
 
         style1 = self.to_style1(istyle)
         x = self.conv1(x, style1)
-        x = self.activation(x + noise1)
+        # x = self.activation(x + noise1)
+        x = self.activation(x)
 
         style2 = self.to_style2(istyle)
         x = self.conv2(x, style2)
-        x = self.activation(x + noise2)
+        # x = self.activation(x + noise2)
+        x = self.activation(x)
 
         return x
 
@@ -160,3 +143,67 @@ class Conv2DMod(nn.Module):
 
         x = x.reshape(-1, self.filters, h, w)
         return x
+
+class MappingNetwork(nn.Module):
+    def __init__(self, latent_dim):
+        super().__init__()
+        latent_dim = latent_dim // 4
+        self.conv_1 = nn.Sequential(
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.fc_1 = nn.Sequential(
+            nn.MaxPool2d(kernel_size=8, stride=8),
+            nn.Flatten(),
+            nn.Linear(64, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+        self.conv_2 = nn.Sequential(
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.fc_2 = nn.Sequential(
+            nn.MaxPool2d(kernel_size=4, stride=4),
+            nn.Flatten(),
+            nn.Linear(128, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+        self.conv_3 = nn.Sequential(
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.fc_3 = nn.Sequential(
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Flatten(),
+            nn.Linear(256, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+        self.conv_4 = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.fc_4 = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+
+    def forward(self, x):
+        y = []
+        x = self.conv_1(x)
+        y.append(self.fc_1(x))
+        x = self.conv_2(x)
+        y.append(self.fc_2(x))
+        x = self.conv_3(x)
+        y.append(self.fc_3(x))
+        x = self.conv_4(x)
+        y.append(self.fc_4(x))
+        return torch.cat(y, dim=-1)
