@@ -78,13 +78,12 @@ class RGBBlock(nn.Module):
         self.input_channel = input_channel
         self.to_style = nn.Linear(latent_dim, input_channel)
 
-        out_filters = 3 if not rgba else 4
+        out_filters = 1  # 3 if not rgba else 4
         self.conv = Conv2DMod(input_channel, out_filters, 1, demod=False)
 
         self.upsample = nn.Upsample(scale_factor = 2, mode='bilinear', align_corners=False) if upsample else None
 
     def forward(self, x, prev_rgb, istyle):
-        b, c, h, w = x.shape
         style = self.to_style(istyle)
         x = self.conv(x, style)
 
@@ -191,7 +190,7 @@ class DiscriminatorBlock(nn.Module):
         return x
 
 class Generator(nn.Module):
-    def __init__(self, image_size, latent_dim, network_capacity = 16, transparent = False, no_const = False, fmap_max = 512):
+    def __init__(self, image_size, latent_dim, network_capacity = 16, transparent = False, no_const = False, fmap_max = 128):
         super().__init__()
         self.image_size = image_size
         self.latent_dim = latent_dim
@@ -199,8 +198,7 @@ class Generator(nn.Module):
 
         filters = [network_capacity * (2 ** (i + 1)) for i in range(self.num_layers)][::-1]
 
-        set_fmap_max = partial(min, fmap_max)
-        filters = list(map(set_fmap_max, filters))
+        filters = [min(x, fmap_max) for x in filters]
         init_channels = filters[0]
         filters = [init_channels, *filters]
 
@@ -231,7 +229,6 @@ class Generator(nn.Module):
 
     def forward(self, styles, input_noise):
         batch_size = styles.shape[0]
-        image_size = self.image_size
 
         if self.no_const:
             avg_style = styles.mean(dim=1)[:, :, None, None]
@@ -249,7 +246,7 @@ class Generator(nn.Module):
         return rgb
 
 class Discriminator(nn.Module):
-    def __init__(self, image_size, network_capacity = 16, fq_layers = [], fq_dict_size = 256, transparent = False, fmap_max = 512):
+    def __init__(self, image_size, network_capacity = 16, transparent = False, fmap_max = 128):
         super().__init__()
         num_layers = int(np.log2(image_size) - 1)
         num_init_filters = 3 if not transparent else 4
@@ -257,25 +254,18 @@ class Discriminator(nn.Module):
         blocks = []
         filters = [num_init_filters] + [(network_capacity * 4) * (2 ** i) for i in range(num_layers + 1)]
 
-        set_fmap_max = partial(min, fmap_max)
-        filters = list(map(set_fmap_max, filters))
+        filters = [min(x, fmap_max) for x in filters]
         chan_in_out = list(zip(filters[:-1], filters[1:]))
 
         blocks = []
-        quantize_blocks = []
 
         for ind, (in_chan, out_chan) in enumerate(chan_in_out):
-            num_layer = ind + 1
             is_not_last = ind != (len(chan_in_out) - 1)
 
             block = DiscriminatorBlock(in_chan, out_chan, downsample = is_not_last)
             blocks.append(block)
 
-            quantize_fn = PermuteToFrom(VectorQuantize(out_chan, fq_dict_size)) if num_layer in fq_layers else None
-            quantize_blocks.append(quantize_fn)
-
         self.blocks = nn.ModuleList(blocks)
-        self.quantize_blocks = nn.ModuleList(quantize_blocks)
 
         chan_last = filters[-1]
         latent_dim = 2 * 2 * chan_last
@@ -285,18 +275,10 @@ class Discriminator(nn.Module):
         self.to_logit = nn.Linear(latent_dim, 1)
 
     def forward(self, x):
-        b, *_ = x.shape
-
-        quantize_loss = torch.zeros(1).to(x)
-
-        for (block, q_block) in zip(self.blocks, self.quantize_blocks):
+        for block in self.blocks:
             x = block(x)
-
-            if q_block is not None:
-                x, loss = q_block(x)
-                quantize_loss += loss
 
         x = self.final_conv(x)
         x = self.flatten(x)
         x = self.to_logit(x)
-        return x.squeeze(), quantize_loss
+        return x.squeeze()

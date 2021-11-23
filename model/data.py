@@ -56,11 +56,11 @@ class Data(object):
             return img_data
 
     def _wrap_data(self, mode, font, char_x, char_y):
-        x_0 = self._load_image(self._basefont[char_y])
-        x_1 = self._load_image(self._basefont[char_x])
-        x_2 = self._load_image(self._paths[mode][font][char_y])
+        x_0 = self._load_image(self._basefont[char_x])
+        x_1 = self._load_image(self._basefont[char_y])
+        x_2 = self._load_image(self._paths[mode][font][char_x])
         x = torch.cat((x_0, x_1, x_2), 1)
-        y = self._load_image(self._paths[mode][font][char_x])
+        y = self._load_image(self._paths[mode][font][char_y])
         return f'{font}: {char_x} => {char_y}', x, y
 
     def iterator(self, mode):
@@ -82,7 +82,7 @@ class Data(object):
 
     def plot_results(self, name, tag, msg, results):
         font, chars = msg.split(': ')
-        char_1, char_2 = chars.split(' => ')
+        char_x, char_y = chars.split(' => ')
         font_dir = os.path.join('logs', name, tag, font)
         if not os.path.exists(font_dir):
             os.makedirs(font_dir)
@@ -90,4 +90,4 @@ class Data(object):
         img_data = img_data.detach().numpy().reshape(img_data.shape[-2:])
         img_data = ((1 - img_data) / 2 * 255).astype(np.uint8)
         img_data = np.repeat(img_data[:, :, np.newaxis], 3, axis=-1)
-        Image.fromarray(img_data).save(os.path.join(font_dir, f'{char_1}.{char_2}.jpg'))
+        Image.fromarray(img_data).save(os.path.join(font_dir, f'{char_x}.{char_y}.jpg'))
