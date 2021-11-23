@@ -146,13 +146,14 @@ class GAN(object):
     def evaluate(self, iterator, tag):
         print(f'Evaluating...')
         loss = 0
-        for msg, x, y in iterator:
-            x, y = self._to_device([x, y])
-            y_hat = self.G(x)
-            mseloss = nn.MSELoss()
-            loss += mseloss(y_hat,y)
-            x, y, y_hat = self._cpu([x, y, y_hat])
-            self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
+        with torch.no_grad():
+            for msg, x, y in iterator:
+                x, y = self._to_device([x, y])
+                y_hat = self.G(x)
+                mseloss = nn.MSELoss()
+                loss += mseloss(y_hat,y)
+                x, y, y_hat = self._cpu([x, y, y_hat])
+                self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
         aveloss = loss/(sum(1 for _ in iterator))
         print(f'Log: logs/{self.name}/{tag}')
         return aveloss
