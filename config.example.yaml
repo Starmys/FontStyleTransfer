@@ -20,18 +20,18 @@ train:
     train: 0.8
     dev: 0.1
     seed: 2021
-  generator: 'u_net'
+  generator: 'style_generator'
   discriminator: 'classifier'
   training:
     seed: 2021
     lr: 0.01
     epoch: 100
     iteration: 2000
-    batch_size: 8
+    batch_size: 5
     g_d_rate: 10
     loss:
       gan_loss: 'lsgan'
-      l1_loss_weight: 100
+      l1_loss_weight: 10
       l2_loss_weight: 0
 generate:
   basefont: 'arial'

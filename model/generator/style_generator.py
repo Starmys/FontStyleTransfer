@@ -17,6 +17,7 @@ class Generator(nn.Module):
 
         init_channels = filters[0]
         filters = [init_channels, *filters]
+        filters[-1] = 1
 
         in_out_pairs = zip(filters[:-1], filters[1:])
 
@@ -35,6 +36,8 @@ class Generator(nn.Module):
                 upsample_rgb = ind != (self.num_layers - 1)
             )
             self.blocks.append(block)
+
+        self.blocks.append(nn.Tanh())
 
         self.mapping_network = nn.Sequential(
             nn.Conv2d(1, 16, kernel_size=3, padding=1),
@@ -77,14 +80,13 @@ class Generator(nn.Module):
         avg_style = styles.mean(dim=1)[:, :, None, None]
         x = self.to_initial_block(avg_style)
 
-        rgb = None
         styles = styles.transpose(0, 1)
         x = self.initial_conv(x)
 
         for style, block in zip(styles, self.blocks):
-            x, rgb = block(x, rgb, style, noise)
+            x = block(x, style, noise)
 
-        return rgb
+        return x
 
 
 class GeneratorBlock(nn.Module):
@@ -101,9 +103,8 @@ class GeneratorBlock(nn.Module):
         self.conv2 = Conv2DMod(filters, filters, 3)
 
         self.activation = nn.LeakyReLU(0.2, inplace=True)
-        self.to_rgb = RGBBlock(latent_dim, filters, upsample_rgb, rgba)
 
-    def forward(self, x, prev_rgb, istyle, inoise):
+    def forward(self, x, istyle, inoise):
         if self.upsample is not None:
             x = self.upsample(x)
 
@@ -119,33 +120,7 @@ class GeneratorBlock(nn.Module):
         x = self.conv2(x, style2)
         x = self.activation(x + noise2)
 
-        rgb = self.to_rgb(x, prev_rgb, istyle)
-        return x, rgb
-
-
-class RGBBlock(nn.Module):
-    def __init__(self, latent_dim, input_channel, upsample):
-        super().__init__()
-        self.input_channel = input_channel
-        self.to_style = nn.Linear(latent_dim, input_channel)
-
-        out_filters = 1
-        self.conv = Conv2DMod(input_channel, out_filters, 1, demod=False)
-
-        self.upsample = nn.Upsample(scale_factor = 2, mode='bilinear', align_corners=False) if upsample else None
-
-    def forward(self, x, prev_rgb, istyle):
-        style = self.to_style(istyle)
-        x = self.conv(x, style)
-
-        if prev_rgb is not None:
-            x = x + prev_rgb
-
-        if self.upsample is not None:
-            x = self.upsample(x)
-
         return x
-
 
 class Conv2DMod(nn.Module):
     def __init__(self, in_chan, out_chan, kernel, demod=True, stride=1, dilation=1, eps = 1e-8, **kwargs):
