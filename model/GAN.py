@@ -1,9 +1,9 @@
 import importlib
 
+import yaml
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 from .data import Data
 
@@ -22,6 +22,8 @@ class GAN(object):
             self._build_model(config['training'])
         except:
             exit(f'Training config error.')
+        with open(f"./logs/{self.name}/training_config.yaml", "w") as f:
+            f.write(yaml.safe_dump(config))
 
     def set_requires_grad(self, nets, requires_grad=False):
         if not isinstance(nets, list):
@@ -108,7 +110,6 @@ class GAN(object):
         return loss_G
 
     def start(self):
-        MSE = []
         self.G.apply(self.initialize_parameters)
         self.D.apply(self.initialize_parameters)
         train_it = self.data.iterator('train')
@@ -117,10 +118,11 @@ class GAN(object):
             epoch_tag = str(epoch).zfill(len(str(self.epoch_num - 1)))
             print(f'========== Epoch {epoch_tag} ==========')
             self.train(train_it)
-            mseloss = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
-            MSE.append(mseloss)
-        np.save(f"./logs/{self.name}/MSEloss.npy", MSE)
-        mseloss_test = self.evaluate(self.data.iterator('test'), 'test')
+            mse = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
+            print(f"Avg.MSE = {mse}")
+            with open(f"./logs/{self.name}/MSELoss.txt", "a") as f:
+                f.write(f'{mse}\n')
+        print(f"Test Avg.MSE: {self.evaluate(self.data.iterator('test'), 'test')}")
 
     def train(self, iterator):
         print(f'Training...')
@@ -145,15 +147,15 @@ class GAN(object):
 
     def evaluate(self, iterator, tag):
         print(f'Evaluating...')
+        num = 0
         loss = 0
         with torch.no_grad():
             for msg, x, y in iterator:
                 x, y = self._to_device([x, y])
                 y_hat = self.G(x)
-                mseloss = nn.MSELoss()
-                loss += mseloss(y_hat,y)
+                loss += F.mse_loss(y_hat, y).item()
                 x, y, y_hat = self._cpu([x, y, y_hat])
                 self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
-        aveloss = loss/(sum(1 for _ in iterator))
-        print(f'Log: logs/{self.name}/{tag}')
-        return aveloss
+                num += 1
+        print(f'Evaluation output: logs/{self.name}/{tag}')
+        return loss / num
