@@ -11,6 +11,7 @@ class Generator(nn.Module):
         self.skeleton_layes = 2
         self.style_layers = 2
         self.num_layers = self.skeleton_layes + self.style_layers
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         filters = [16 * (2 ** (i + 1)) for i in range(4)][::-1]
         filters = [min(x, 128) for x in filters]
@@ -67,6 +68,7 @@ class Generator(nn.Module):
         image_size = x.shape[-1]
 
         noise = torch.FloatTensor(batch_size, image_size, image_size, 1).uniform_(0., 1.)
+        noise = noise.to(self.device)
 
         x_1 = x[:, 1:2, :, :]
         style_1 = self.mapping_network(x_1)[:, None, :]
