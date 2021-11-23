@@ -3,6 +3,7 @@ import importlib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 from .data import Data
 
@@ -107,6 +108,7 @@ class GAN(object):
         return loss_G
 
     def start(self):
+        MSE = []
         self.G.apply(self.initialize_parameters)
         self.D.apply(self.initialize_parameters)
         train_it = self.data.iterator('train')
@@ -115,8 +117,10 @@ class GAN(object):
             epoch_tag = str(epoch).zfill(len(str(self.epoch_num - 1)))
             print(f'========== Epoch {epoch_tag} ==========')
             self.train(train_it)
-            self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
-        self.evaluate(self.data.iterator('test'), 'test')
+            mseloss = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
+            MSE.append(mseloss)
+        np.save(f"./logs/{self.name}/MSEloss.npy", MSE)
+        mseloss_test = self.evaluate(self.data.iterator('test'), 'test')
 
     def train(self, iterator):
         print(f'Training...')
@@ -141,9 +145,14 @@ class GAN(object):
 
     def evaluate(self, iterator, tag):
         print(f'Evaluating...')
+        loss = 0
         for msg, x, y in iterator:
             x, y = self._to_device([x, y])
             y_hat = self.G(x)
+            mseloss = nn.MSELoss()
+            loss += mseloss(y_hat,y)
             x, y, y_hat = self._cpu([x, y, y_hat])
             self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
+        aveloss = loss/(sum(1 for _ in iterator))
         print(f'Log: logs/{self.name}/{tag}')
+        return aveloss
