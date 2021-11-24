@@ -1,3 +1,4 @@
+import os
 import importlib
 
 import yaml
@@ -22,7 +23,9 @@ class GAN(object):
             self._build_model(config['training'])
         except:
             exit(f'Training config error.')
-        with open(f"./logs/{self.name}/training_config.yaml", "w") as f:
+        self.log_path = os.path.join('logs', self.name)
+        os.makedirs(self.log_path, exist_ok=True)
+        with open(os.path.join(self.log_path, 'training_config.yaml'), 'w') as f:
             f.write(yaml.safe_dump(config))
 
     def set_requires_grad(self, nets, requires_grad=False):
@@ -120,7 +123,7 @@ class GAN(object):
             self.train(train_it)
             mse = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
             print(f"Avg.MSE = {mse}")
-            with open(f"./logs/{self.name}/MSELoss.txt", "a") as f:
+            with open(os.path.join(self.log_path, 'MSELoss.txt', 'a')) as f:
                 f.write(f'{mse}\n')
         print(f"Test Avg.MSE: {self.evaluate(self.data.iterator('test'), 'test')}")
 
@@ -157,5 +160,5 @@ class GAN(object):
                 x, y, y_hat = self._cpu([x, y, y_hat])
                 self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
                 num += 1
-        print(f'Evaluation output: logs/{self.name}/{tag}')
+        print(f'Evaluation output: {os.path.join("logs", self.name, tag)}')
         return loss / num
