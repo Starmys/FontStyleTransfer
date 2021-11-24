@@ -123,7 +123,7 @@ class GAN(object):
             self.train(train_it)
             mse = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
             print(f"Avg.MSE = {mse}")
-            with open(os.path.join(self.log_path, 'MSELoss.txt', 'a')) as f:
+            with open(os.path.join(self.log_path, 'MSELoss.txt'), 'a') as f:
                 f.write(f'{mse}\n')
         print(f"Test Avg.MSE: {self.evaluate(self.data.iterator('test'), 'test')}")
 
