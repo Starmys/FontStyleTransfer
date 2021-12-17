@@ -6,7 +6,7 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.down_0 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=3, padding=1),
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(0.2, inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2)
