@@ -19,6 +19,7 @@ class Generator(nn.Module):
         init_channels = filters[0]
         filters = [init_channels, *filters]
         filters[-1] = 1
+        print(filters)
 
         in_out_pairs = zip(filters[:-1], filters[1:])
 
