@@ -54,7 +54,7 @@ class Generator(nn.Module):
             nn.Upsample(scale_factor=2, mode='bilinear')
         )
         self.up_4 = nn.Sequential(
-            nn.Conv2d(11, 1, kernel_size=3, padding=1),
+            nn.Conv2d(9, 1, kernel_size=3, padding=1),
             nn.Tanh(),
         )
 
