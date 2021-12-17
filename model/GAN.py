@@ -131,6 +131,7 @@ class GAN(object):
         print(f'Training...')
         for i in range(self.iteration_num):
             x, y = self._get_batch_data(iterator)
+            x = y
             x, y = self._to_device([x, y])
             y_hat = self.G(x)                          # compute fake images: y_hat = G(x)
             # update D
@@ -154,6 +155,7 @@ class GAN(object):
         loss = 0
         with torch.no_grad():
             for msg, x, y in iterator:
+                x = y
                 x, y = self._to_device([x, y])
                 y_hat = self.G(x)
                 loss += F.mse_loss(y_hat, y).item()
