@@ -7,7 +7,7 @@ class Generator(nn.Module):
     def __init__(self):
         super().__init__()
         self.image_size = 32
-        self.latent_dim = 512
+        self.latent_dim = 128
         self.skeleton_layes = 2
         self.style_layers = 2
         self.num_layers = self.skeleton_layes + self.style_layers
@@ -183,10 +183,9 @@ class MappingNetwork(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.fc_1 = nn.Sequential(
-            nn.MaxPool2d(kernel_size=8, stride=8),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
-            nn.Linear(64, latent_dim),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.Linear(1024, latent_dim),
         )
         self.conv_2 = nn.Sequential(
             nn.Conv2d(16, 32, kernel_size=3, padding=1),
@@ -195,10 +194,9 @@ class MappingNetwork(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.fc_2 = nn.Sequential(
-            nn.MaxPool2d(kernel_size=4, stride=4),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
-            nn.Linear(128, latent_dim),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.Linear(512, latent_dim),
         )
         self.conv_3 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
@@ -207,10 +205,8 @@ class MappingNetwork(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.fc_3 = nn.Sequential(
-            nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
-            nn.Linear(256, latent_dim),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.Linear(1024, latent_dim),
         )
         self.conv_4 = nn.Sequential(
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
@@ -221,7 +217,6 @@ class MappingNetwork(nn.Module):
         self.fc_4 = nn.Sequential(
             nn.Flatten(),
             nn.Linear(512, latent_dim),
-            nn.LeakyReLU(0.2, inplace=True)
         )
 
     def forward(self, x):
@@ -235,3 +230,23 @@ class MappingNetwork(nn.Module):
         x = self.conv_4(x)
         y.append(self.fc_4(x))
         return torch.cat(y, dim=-1)
+
+class MappingNetwork(nn.Module):
+    def __init__(self, latent_dim):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(1024, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(latent_dim, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(latent_dim, latent_dim),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(latent_dim, latent_dim)
+        )
+
+    def forward(self, x):
+        return self.fc(x)
