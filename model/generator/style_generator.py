@@ -38,7 +38,7 @@ class Generator(nn.Module):
             )
             self.blocks.append(block)
 
-        self.mapping_network = MappingNetwork(self.latent_dim)
+        self.mapping_network = StyleVectorizer(self.latent_dim)
 
     def forward(self, x):
 
@@ -172,7 +172,7 @@ class Conv2DMod(nn.Module):
         x = x.reshape(-1, self.filters, h, w)
         return x
 
-class MappingNetwork(nn.Module):
+class ConvMappingNetwork(nn.Module):
     def __init__(self, latent_dim):
         super().__init__()
         latent_dim = latent_dim // 4
@@ -250,3 +250,35 @@ class MappingNetwork(nn.Module):
 
     def forward(self, x):
         return self.fc(x)
+
+class EqualLinear(nn.Module):
+    def __init__(self, in_dim, out_dim, lr_mul = 1, bias = True):
+        super().__init__()
+        self.weight = nn.Parameter(torch.randn(out_dim, in_dim))
+        if bias:
+            self.bias = nn.Parameter(torch.zeros(out_dim))
+
+        self.lr_mul = lr_mul
+
+    def forward(self, input):
+        return F.linear(input, self.weight * self.lr_mul, bias=self.bias * self.lr_mul)
+
+class StyleVectorizer(nn.Module):
+    def __init__(self, latent_dim):
+        super().__init__()
+
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            EqualLinear(1024, latent_dim, 0.1),
+            nn.LeakyReLU(0.2, inplace=True),
+            EqualLinear(latent_dim, latent_dim, 0.1),
+            nn.LeakyReLU(0.2, inplace=True),
+            EqualLinear(latent_dim, latent_dim, 0.1),
+            nn.LeakyReLU(0.2, inplace=True),
+            EqualLinear(latent_dim, latent_dim, 0.1),
+            nn.LeakyReLU(0.2, inplace=True),
+        )
+
+    def forward(self, x):
+        x = F.normalize(x, dim=1)
+        return self.net(x)
