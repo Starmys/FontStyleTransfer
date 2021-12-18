@@ -38,8 +38,6 @@ class Generator(nn.Module):
             )
             self.blocks.append(block)
 
-        self.blocks.append(nn.Tanh())
-
         self.mapping_network = MappingNetwork(self.latent_dim)
 
     def forward(self, x):
@@ -63,11 +61,36 @@ class Generator(nn.Module):
         avg_style = styles.mean(dim=1)[:, :, None, None]
         x = self.to_initial_block(avg_style)
 
+        rgb = None
         styles = styles.transpose(0, 1)
         x = self.initial_conv(x)
 
         for style, block in zip(styles, self.blocks):
-            x = block(x, style, noise)
+            x, rgb = block(x, rgb, style, noise)
+
+        return F.tanh(rgb)
+
+
+class RGBBlock(nn.Module):
+    def __init__(self, latent_dim, input_channel, upsample, rgba = False):
+        super().__init__()
+        self.input_channel = input_channel
+        self.to_style = nn.Linear(latent_dim, input_channel)
+
+        out_filters = 1  # 3 if not rgba else 4
+        self.conv = Conv2DMod(input_channel, out_filters, 1, demod=False)
+
+        self.upsample = nn.Upsample(scale_factor = 2, mode='bilinear', align_corners=False) if upsample else None
+
+    def forward(self, x, prev_rgb, istyle):
+        style = self.to_style(istyle)
+        x = self.conv(x, style)
+
+        if prev_rgb is not None:
+            x = x + prev_rgb
+
+        if self.upsample is not None:
+            x = self.upsample(x)
 
         return x
 
@@ -87,7 +110,9 @@ class GeneratorBlock(nn.Module):
 
         self.activation = nn.LeakyReLU(0.2, inplace=True)
 
-    def forward(self, x, istyle, inoise):
+        self.to_rgb = RGBBlock(latent_dim, filters, upsample_rgb, rgba)
+
+    def forward(self, x, prev_rgb, istyle, inoise):
         if self.upsample is not None:
             x = self.upsample(x)
 
@@ -105,7 +130,9 @@ class GeneratorBlock(nn.Module):
         # x = self.activation(x + noise2)
         x = self.activation(x)
 
-        return x
+        rgb = self.to_rgb(x, prev_rgb, istyle)
+        return x, rgb
+
 
 class Conv2DMod(nn.Module):
     def __init__(self, in_chan, out_chan, kernel, demod=True, stride=1, dilation=1, eps = 1e-8, **kwargs):

@@ -54,11 +54,18 @@ class Generator(nn.Module):
             nn.Upsample(scale_factor=2, mode='bilinear')
         )
         self.up_4 = nn.Sequential(
-            nn.Conv2d(11, 1, kernel_size=3, padding=1),
+            nn.Conv2d(11, 4, kernel_size=3, padding=1),
+            nn.BatchNorm2d(8),
+            nn.ReLU(inplace=True),
+            nn.Upsample(scale_factor=2, mode='bilinear')
+        )
+        self.up_5 = nn.Sequential(
+            nn.Conv2d(4, 1, kernel_size=1, padding=1),
             nn.Tanh(),
         )
 
     def forward(self, x):                           # [b,   2,  32,  32]
+        x0, x1, x2 = x[:, 0:1, :, :]
         h_1 = self.down_0(x)                        # [b,  16,  16,  16]
         h_2 = self.down_1(h_1)                      # [b,  32,   8,   8]
         h_3 = self.down_2(h_2)                      # [b,  64,   4,   4]
