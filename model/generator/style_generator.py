@@ -49,14 +49,15 @@ class Generator(nn.Module):
         # noise = noise.to(self.device)
         noise = None
 
-        x_1 = x[:, 1:2, :, :]
-        style_1 = self.mapping_network(x_1)[:, None, :]
-        x_2 = x[:, 2:3, :, :]
-        style_2 = self.mapping_network(x_2)[:, None, :]
-        styles = torch.cat([
-            style_1.expand(-1, self.skeleton_layes, -1),
-            style_2.expand(-1, self.style_layers, -1)
-        ], dim=1)
+        # x_1 = x[:, 1:2, :, :]
+        # style_1 = self.mapping_network(x_1)[:, None, :]
+        # x_2 = x[:, 2:3, :, :]
+        # style_2 = self.mapping_network(x_2)[:, None, :]
+        # styles = torch.cat([
+        #     style_1.expand(-1, self.skeleton_layes, -1),
+        #     style_2.expand(-1, self.style_layers, -1)
+        # ], dim=1)
+        styles = self.mapping_network(x)[:, None, :].expand(-1, self.skeleton_layes + self.style_layers, -1)
 
         avg_style = styles.mean(dim=1)[:, :, None, None]
         x = self.to_initial_block(avg_style)
