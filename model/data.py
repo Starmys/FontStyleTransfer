@@ -23,18 +23,17 @@ class Data(object):
         for font in os.listdir(config['dir']):
             font_dir = os.path.join(config['dir'], font)
             if font != config['basefont']:
-                self._paths['train'][font] = {}
-                self._paths['dev'][font] = {}
-                self._paths['test'][font] = {}
-                for file in os.listdir(font_dir):
-                    char = os.path.splitext(file)[0]
-                    if char not in self._basefont:
-                        continue
-                    path = os.path.join(font_dir, file)
-                    self._paths['train'][font][char] = path
-                    if font not in config['trainfonts'] and np.random.random() < 0.2:
-                        self._paths['dev'][font][char] = path
-                        self._paths['test'][font][char] = path
+                if font in config['trainfonts']:
+                    self._paths['train'][font] = {
+                        os.path.splitext(file)[0]: os.path.join(font_dir, file)
+                        for file in os.listdir(font_dir)
+                    }
+                self._paths['dev'][font] = {
+                    os.path.splitext(file)[0]: os.path.join(font_dir, file)
+                    for file in os.listdir(font_dir)
+                    if np.random.random() < 0.2
+                }
+                self._paths['test'] = self._paths['dev']
 
         self._cache = {}
 
