@@ -13,7 +13,7 @@ render:
   to: 'data/img'
   fonts: ['*']
 train:
-  name: 'ex1'
+  name: 'ex0'
   data:
     dir: 'data/img'  # Should be the same as config['render']['to']
     basefont: 'comic'
