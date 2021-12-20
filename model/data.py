@@ -31,12 +31,9 @@ class Data(object):
                     if char not in self._basefont:
                         continue
                     path = os.path.join(font_dir, file)
-                    p = np.random.random()
-                    if p < config['train']:
-                        self._paths['train'][font][char] = path
-                    elif p < config['train'] + config['dev']:
+                    self._paths['train'][font][char] = path
+                    if font not in config['trainfonts'] and np.random.random() < 0.2:
                         self._paths['dev'][font][char] = path
-                    else:
                         self._paths['test'][font][char] = path
 
         self._cache = {}

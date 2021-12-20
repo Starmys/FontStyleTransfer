@@ -121,11 +121,11 @@ class GAN(object):
             epoch_tag = str(epoch).zfill(len(str(self.epoch_num - 1)))
             print(f'========== Epoch {epoch_tag} ==========')
             self.train(train_it)
-            mse = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
-            print(f"Avg.MSE = {mse}")
-            with open(os.path.join(self.log_path, 'MSELoss.txt'), 'a') as f:
-                f.write(f'{mse}\n')
-        print(f"Test Avg.MSE: {self.evaluate(self.data.iterator('test'), 'test')}")
+            error = self.evaluate(self.data.iterator('dev'), f'epoch{epoch_tag}')
+            print(f"Avg.Error = {error}")
+            with open(os.path.join(self.log_path, 'Error.txt'), 'a') as f:
+                f.write(f'{error}\n')
+        print(f"Test Avg.Error: {self.evaluate(self.data.iterator('test'), 'test')}")
 
     def train(self, iterator):
         print(f'Training...')
@@ -156,7 +156,7 @@ class GAN(object):
             for msg, x, y in iterator:
                 x, y = self._to_device([x, y])
                 y_hat = self.G(x)
-                loss += F.mse_loss(y_hat, y).item()
+                loss += 1 - F.cosine_similarity(y_hat.view(1, -1), y.view(1, -1)).item()
                 x, y, y_hat = self._cpu([x, y, y_hat])
                 self.data.plot_results(self.name, tag, msg, [x[:, i:i+1, :, :] for i in range(x.shape[1])] + [y, y_hat])
                 num += 1
