@@ -30,9 +30,9 @@ general:
     - from: '0'
       to: '9'
 render:
-  from: 'data/raw'         # Source directorry
-  to: 'data/img'           # Destination directorry
-  fonts: ['*']             # Render all fonts in the source directorry
+  from: 'data/raw'         # Source directory
+  to: 'data/img'           # Destination directory
+  fonts: ['*']             # Render all fonts in the source directory
 train:
   name: 'ex0'              # Experiment tag
   data:
