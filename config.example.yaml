@@ -13,14 +13,14 @@ render:
   to: 'data/img'
   fonts: ['*']
 train:
-  name: 'ex1'
+  name: 'ex0'
   data:
     dir: 'data/img'  # Should be the same as config['render']['to']
-    basefont: 'arial'
-    train: 0.8
-    dev: 0.1
+    basefont: 'comic'
+    trainfonts: ['bradhitc', 'caveat', 'fuzzybubbles', 'indieflower', 'inkfree', 'mali', 'ole', 'sacramento', 'shadowsintolight', 'twinklestar']
+    testfonts: ['cookie', 'gloria', 'vujahdayscript']
     seed: 2021
-  generator: 'style_generator'
+  generator: 'u_net'
   discriminator: 'classifier'
   training:
     seed: 2021
@@ -34,4 +34,4 @@ train:
       l1_loss_weight: 10
       l2_loss_weight: 0
 generate:
-  basefont: 'arial'
+  basefont: 'comic'
