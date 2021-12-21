@@ -33,5 +33,3 @@ train:
       gan_loss: 'lsgan'
       l1_loss_weight: 10
       l2_loss_weight: 0
-generate:
-  basefont: 'comic'

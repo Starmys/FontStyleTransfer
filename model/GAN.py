@@ -138,8 +138,7 @@ class GAN(object):
                 self.set_requires_grad(self.D, True)   # enable backprop for D
                 self.optimizer_D.zero_grad()           # set D's gradients to zero
                 loss_D = self.backward_D(x, y, y_hat)  # calculate gradients for D
-                if loss_D > 0.1:
-                    self.optimizer_D.step()                # update D's weights
+                self.optimizer_D.step()                # update D's weights
             # update G
             self.set_requires_grad(self.D, False)      # D requires no gradients when optimizing G
             self.optimizer_G.zero_grad()               # set G's gradients to zero
